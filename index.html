@@ -1,369 +1,337 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<title>Stick Cricket Game</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neon Dash - Arcade Game</title>
 
 <style>
 * {
+    margin: 0;
+    padding: 0;
     box-sizing: border-box;
 }
 
 body {
-    margin: 0;
-    font-family: Arial;
-    background: #172c38;
+    background: #080b18;
     color: white;
+    font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+}
+
+.game-container {
+    width: 95%;
+    max-width: 650px;
     text-align: center;
 }
 
 h1 {
-    color: #ffcc00;
+    color: #00f7ff;
+    margin-bottom: 12px;
+    letter-spacing: 4px;
+    text-shadow: 0 0 15px #00f7ff;
 }
 
-.game {
-    width: 95%;
-    max-width: 750px;
-    margin: 20px auto;
-    background: #243c48;
-    padding: 15px;
-    border-radius: 15px;
-}
-
-.scoreboard {
+.stats {
     display: flex;
     justify-content: space-around;
-    font-size: 20px;
-    background: #111;
-    padding: 15px;
-    border-radius: 10px;
-    margin-bottom: 15px;
+    margin: 12px 0;
+    font-size: 18px;
 }
 
-.ground {
-    height: 350px;
-    background: linear-gradient(#55b94b 0%, #278c38 100%);
-    position: relative;
-    overflow: hidden;
-    border: 4px solid white;
-    border-radius: 10px;
-}
-
-.pitch {
-    position: absolute;
-    width: 140px;
-    height: 220px;
-    background: #d5b17c;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-.batsman {
-    position: absolute;
-    bottom: 45px;
-    left: 55%;
-    font-size: 55px;
-    z-index: 3;
-    transform-origin: bottom center;
-}
-
-.bowler {
-    position: absolute;
-    top: 35px;
-    left: 48%;
-    font-size: 48px;
-}
-
-.ball {
-    position: absolute;
-    width: 15px;
-    height: 15px;
-    background: red;
-    border-radius: 50%;
-    top: 65px;
-    left: 49%;
-    display: none;
-    z-index: 5;
-}
-
-.ball.bowling {
-    display: block;
-    animation: bowl 0.8s linear forwards;
-}
-
-@keyframes bowl {
-    from {
-        top: 65px;
-        left: 49%;
-    }
-    to {
-        top: 270px;
-        left: 53%;
-    }
-}
-
-.batsman.hit {
-    animation: swing 0.3s;
-}
-
-@keyframes swing {
-    50% {
-        transform: rotate(-60deg);
-    }
-}
-
-#result {
-    font-size: 28px;
-    font-weight: bold;
-    color: yellow;
-    height: 40px;
-    margin: 12px;
+canvas {
+    width: 100%;
+    background: #10172b;
+    border: 2px solid #00f7ff;
+    border-radius: 12px;
+    box-shadow: 0 0 25px #00f7ff55;
 }
 
 button {
-    background: #ffcc00;
-    color: black;
+    margin-top: 15px;
+    padding: 12px 30px;
+    background: #00f7ff;
+    color: #080b18;
     border: none;
-    padding: 15px 30px;
-    font-size: 20px;
-    border-radius: 10px;
-    cursor: pointer;
+    border-radius: 8px;
+    font-size: 17px;
     font-weight: bold;
-    margin: 8px;
+    cursor: pointer;
 }
 
 button:hover {
-    background: orange;
+    background: white;
+    transform: scale(1.05);
 }
 
-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.instructions {
-    color: #ddd;
+p {
+    margin-top: 12px;
+    color: #aaa;
+    font-size: 14px;
 }
 </style>
 </head>
 
 <body>
 
-<h1>🏏 STICK CRICKET</h1>
+<div class="game-container">
 
-<div class="game">
+<h1>NEON DASH</h1>
 
-    <div class="scoreboard">
-        <span>Runs: <b id="score">0</b></span>
-        <span>Wickets: <b id="wickets">0</b></span>
-        <span>Balls: <b id="balls">0</b>/6</span>
-    </div>
+<div class="stats">
+    <span>Score: <b id="score">0</b></span>
+    <span>Coins: <b id="coins">0</b></span>
+    <span>Best: <b id="best">0</b></span>
+</div>
 
-    <div class="ground">
+<canvas id="game" width="600" height="450"></canvas>
 
-        <div class="bowler">🏃</div>
+<button onclick="restartGame()">START / RESTART</button>
 
-        <div class="pitch"></div>
-
-        <div class="batsman" id="batsman">🏏</div>
-
-        <div class="ball" id="ball"></div>
-
-    </div>
-
-    <div id="result">Ready to play?</div>
-
-    <button id="bowlBtn" onclick="bowlBall()">BOWL</button>
-
-    <button id="hitBtn" onclick="hitBall()" disabled>HIT! 🏏</button>
-
-    <button onclick="restart()">RESTART</button>
-
-    <p class="instructions">
-        Click HIT when the ball comes near the batsman!
-        <br>
-        You can also press SPACE to hit.
-    </p>
+<p>Use ← → arrow keys or A / D to move. Dodge red blocks and collect gold coins!</p>
 
 </div>
 
 <script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
 
+let player, obstacles, coins;
 let score = 0;
-let wickets = 0;
-let balls = 0;
-
-let bowling = false;
-let canHit = false;
+let coinCount = 0;
+let speed = 3;
 let gameOver = false;
-let hitTimer;
-let bowlTimeout;
+let playing = false;
+let keys = {};
+let frame = 0;
 
-const ball = document.getElementById("ball");
-const batsman = document.getElementById("batsman");
-const result = document.getElementById("result");
+let best = Number(localStorage.getItem("neonBest")) || 0;
+document.getElementById("best").textContent = best;
 
-function updateScore() {
-    document.getElementById("score").textContent = score;
-    document.getElementById("wickets").textContent = wickets;
-    document.getElementById("balls").textContent = balls;
+function restartGame() {
+    player = {
+        x: 275,
+        y: 370,
+        width: 45,
+        height: 45,
+        speed: 6
+    };
+
+    obstacles = [];
+    coins = [];
+
+    score = 0;
+    coinCount = 0;
+    speed = 3;
+    frame = 0;
+
+    gameOver = false;
+    playing = true;
+
+    document.getElementById("score").textContent = 0;
+    document.getElementById("coins").textContent = 0;
+
+    requestAnimationFrame(loop);
 }
 
-function bowlBall() {
+document.addEventListener("keydown", e => {
+    keys[e.key.toLowerCase()] = true;
+});
 
-    if (gameOver || bowling) return;
+document.addEventListener("keyup", e => {
+    keys[e.key.toLowerCase()] = false;
+});
 
-    bowling = true;
-    canHit = false;
+function spawnObjects() {
+    if (frame % 65 === 0) {
+        obstacles.push({
+            x: Math.random() * 550,
+            y: -40,
+            width: 35,
+            height: 35
+        });
+    }
 
-    result.textContent = "Ball coming...";
-    ball.classList.remove("bowling");
+    if (frame % 100 === 0) {
+        coins.push({
+            x: Math.random() * 560,
+            y: -20,
+            radius: 10
+        });
+    }
+}
 
-    void ball.offsetWidth;
+function collision(a, b) {
+    return (
+        a.x < b.x + b.width &&
+        a.x + a.width > b.x &&
+        a.y < b.y + b.height &&
+        a.y + a.height > b.y
+    );
+}
 
-    ball.classList.add("bowling");
+function drawPlayer() {
+    ctx.fillStyle = "#00f7ff";
+    ctx.shadowColor = "#00f7ff";
+    ctx.shadowBlur = 20;
 
-    document.getElementById("bowlBtn").disabled = true;
-    document.getElementById("hitBtn").disabled = false;
+    ctx.fillRect(
+        player.x,
+        player.y,
+        player.width,
+        player.height
+    );
 
-    // The ball becomes hittable near the batsman.
-    hitTimer = setTimeout(() => {
-        canHit = true;
-        result.textContent = "HIT NOW!";
-    }, 450);
+    ctx.shadowBlur = 0;
+}
 
-    bowlTimeout = setTimeout(() => {
-        if (bowling) {
-            missBall();
+function drawObstacles() {
+    ctx.fillStyle = "#ff3155";
+    ctx.shadowColor = "#ff3155";
+    ctx.shadowBlur = 12;
+
+    obstacles.forEach(o => {
+        ctx.fillRect(o.x, o.y, o.width, o.height);
+        o.y += speed;
+    });
+
+    ctx.shadowBlur = 0;
+}
+
+function drawCoins() {
+    coins.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffd700";
+        ctx.shadowColor = "#ffd700";
+        ctx.shadowBlur = 15;
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        c.y += speed;
+    });
+}
+
+function update() {
+    if (keys["arrowleft"] || keys["a"]) {
+        player.x -= player.speed;
+    }
+
+    if (keys["arrowright"] || keys["d"]) {
+        player.x += player.speed;
+    }
+
+    player.x = Math.max(
+        0,
+        Math.min(canvas.width - player.width, player.x)
+    );
+
+    spawnObjects();
+
+    obstacles.forEach(o => {
+        if (collision(player, o)) {
+            gameOver = true;
         }
-    }, 800);
+    });
+
+    coins = coins.filter(c => {
+        let dx = player.x + player.width / 2 - c.x;
+        let dy = player.y + player.height / 2 - c.y;
+
+        if (Math.sqrt(dx * dx + dy * dy) < 28) {
+            coinCount++;
+            document.getElementById("coins").textContent = coinCount;
+            return false;
+        }
+
+        return c.y < canvas.height + 20;
+    });
+
+    obstacles = obstacles.filter(o => o.y < canvas.height + 50);
+
+    score++;
+    speed = 3 + Math.floor(score / 500) * 0.5;
+
+    document.getElementById("score").textContent = score;
 }
 
-function hitBall() {
+function drawBackground() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    if (!canHit || gameOver) return;
+    ctx.strokeStyle = "#1c2945";
+    ctx.lineWidth = 1;
 
-    canHit = false;
-    bowling = false;
-
-    clearTimeout(hitTimer);
-    clearTimeout(bowlTimeout);
-
-    ball.classList.remove("bowling");
-
-    batsman.classList.add("hit");
-
-    setTimeout(() => {
-        batsman.classList.remove("hit");
-    }, 300);
-
-    balls++;
-
-    // Timing determines the score.
-    let runs = Math.floor(Math.random() * 7);
-
-    if (runs === 5) runs = 4;
-
-    score += runs;
-
-    if (runs === 0) {
-        result.textContent = "DOT BALL!";
-    }
-    else if (runs === 4) {
-        result.textContent = "🔥 FOUR!";
-    }
-    else if (runs === 6) {
-        result.textContent = "🚀 SIX!";
-    }
-    else {
-        result.textContent = runs + " RUNS!";
+    for (let x = 0; x < canvas.width; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
     }
 
-    updateScore();
-
-    nextBall();
+    for (let y = 0; y < canvas.height; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+    }
 }
 
-function missBall() {
+function endGame() {
+    playing = false;
 
-    if (!bowling) return;
+    if (score > best) {
+        best = score;
+        localStorage.setItem("neonBest", best);
+        document.getElementById("best").textContent = best;
+    }
 
-    bowling = false;
-    canHit = false;
+    ctx.fillStyle = "rgba(0,0,0,0.75)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    clearTimeout(hitTimer);
-    clearTimeout(bowlTimeout);
+    ctx.textAlign = "center";
 
-    ball.classList.remove("bowling");
+    ctx.fillStyle = "#ff3155";
+    ctx.font = "bold 48px Arial";
+    ctx.fillText("GAME OVER", 300, 200);
 
-    balls++;
-    wickets++;
+    ctx.fillStyle = "white";
+    ctx.font = "22px Arial";
+    ctx.fillText("Final Score: " + score, 300, 250);
 
-    result.textContent = "❌ OUT!";
-
-    updateScore();
-
-    nextBall();
+    ctx.font = "18px Arial";
+    ctx.fillText("Press START / RESTART to play again", 300, 300);
 }
 
-function nextBall() {
+function loop() {
+    if (!playing) return;
 
-    document.getElementById("hitBtn").disabled = true;
+    drawBackground();
+    update();
+    drawObstacles();
+    drawCoins();
+    drawPlayer();
 
-    if (balls >= 6 || wickets >= 2) {
+    frame++;
+
+    if (gameOver) {
         endGame();
         return;
     }
 
-    setTimeout(() => {
-        if (!gameOver) {
-            document.getElementById("bowlBtn").disabled = false;
-            result.textContent = "Ready for next ball!";
-        }
-    }, 900);
+    requestAnimationFrame(loop);
 }
 
-function endGame() {
+drawBackground();
 
-    gameOver = true;
-
-    document.getElementById("bowlBtn").disabled = true;
-    document.getElementById("hitBtn").disabled = true;
-
-    result.textContent = "🏆 INNINGS OVER! Score: " + score;
-}
-
-function restart() {
-    clearTimeout(hitTimer);
-    clearTimeout(bowlTimeout);
-
-    score = 0;
-    wickets = 0;
-    balls = 0;
-
-    bowling = false;
-    canHit = false;
-    gameOver = false;
-
-    ball.classList.remove("bowling");
-
-    updateScore();
-
-    document.getElementById("bowlBtn").disabled = false;
-    document.getElementById("hitBtn").disabled = true;
-
-    result.textContent = "Ready to play?";
-
-}
-
-document.addEventListener("keydown", function(event) {
-    if (event.code === "Space") {
-        event.preventDefault();
-        hitBall();
-    }
-});
+ctx.fillStyle = "white";
+ctx.font = "25px Arial";
+ctx.textAlign = "center";
+ctx.fillText("PRESS START TO PLAY", 300, 220);
 
 </script>
-
 </body>
 </html>
